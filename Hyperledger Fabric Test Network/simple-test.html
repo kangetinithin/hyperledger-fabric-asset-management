@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyperledger Fabric Asset Management - Quick Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .response {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .links {
+            background: #e9ecef;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .links a {
+            display: block;
+            color: #007bff;
+            text-decoration: none;
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .links a:hover {
+            background: #f8f9fa;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Hyperledger Fabric Asset Management System</h1>
+        <h2>Quick Test Interface</h2>
+        
+        <div id="status-container">
+            <div class="info">
+                <strong>System Status:</strong> Checking...
+            </div>
+        </div>
+        
+        <div class="links">
+            <h3>📋 Direct Access Links:</h3>
+            <a href="http://localhost:8080/health" target="_blank">🏥 Health Check - http://localhost:8080/health</a>
+            <a href="http://localhost:8080/api/v1/assets" target="_blank">📊 Get All Assets - http://localhost:8080/api/v1/assets</a>
+            <a href="http://localhost:8080" target="_blank">🌐 API Gateway - http://localhost:8080</a>
+        </div>
+        
+        <div>
+            <h3>🧪 Test Buttons:</h3>
+            <button onclick="testHealth()">Test Health Check</button>
+            <button onclick="testAssets()">Test Get Assets</button>
+            <button onclick="testCreateAsset()">Test Create Asset</button>
+            <button onclick="runAllTests()">Run All Tests</button>
+        </div>
+        
+        <div class="response" id="response-area">
+Click any test button above or use the direct links to test the system.
+
+Expected Results:
+✅ Health Check: {"status":"healthy","message":"..."}
+✅ Get Assets: JSON array of assets
+✅ Create Asset: {"message":"Asset created successfully"}
+
+If you see these responses, your system is working correctly!
+        </div>
+        
+        <div class="info">
+            <h3>📝 Manual Testing Instructions:</h3>
+            <p><strong>1. Open Command Prompt/Terminal and run:</strong></p>
+            <code>curl http://localhost:8080/health</code>
+            <br><br>
+            <p><strong>2. Or open these URLs in your browser:</strong></p>
+            <ul>
+                <li>http://localhost:8080/health</li>
+                <li>http://localhost:8080/api/v1/assets</li>
+            </ul>
+            <br>
+            <p><strong>3. Expected Response for Health Check:</strong></p>
+            <code>{"status":"healthy","message":"Hyperledger Fabric Asset Management System is running"}</code>
+        </div>
+        
+        <div class="warning">
+            <h3>⚠️ If Links Don't Work:</h3>
+            <p>1. Make sure you've run the deployment script: <code>deploy-windows.bat</code></p>
+            <p>2. Check if the server is running on port 8080</p>
+            <p>3. Try running: <code>netstat -an | findstr :8080</code></p>
+            <p>4. If nothing is running, restart the deployment script</p>
+        </div>
+    </div>
+
+    <script>
+        let testResults = [];
+        
+        function updateStatus(message, type = 'info') {
+            const container = document.getElementById('status-container');
+            container.innerHTML = `<div class="${type}"><strong>System Status:</strong> ${message}</div>`;
+        }
+        
+        function logResponse(test, response, success) {
+            const area = document.getElementById('response-area');
+            const timestamp = new Date().toLocaleTimeString();
+            const status = success ? '✅ SUCCESS' : '❌ FAILED';
+            
+            area.textContent += `\n[${timestamp}] ${test}: ${status}\n`;
+            area.textContent += `Response: ${JSON.stringify(response, null, 2)}\n`;
+            area.textContent += '----------------------------------------\n';
+            area.scrollTop = area.scrollHeight;
+            
+            testResults.push({test, success, response});
+        }
+        
+        async function makeRequest(url, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(url, options);
+                const responseData = await response.json().catch(() => response.text());
+                
+                return {
+                    success: response.ok,
+                    status: response.status,
+                    data: responseData
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    status: 0,
+                    data: error.message
+                };
+            }
+        }
+        
+        async function testHealth() {
+            updateStatus('Testing health endpoint...', 'info');
+            const result = await makeRequest('http://localhost:8080/health');
+            logResponse('Health Check', result.data, result.success);
+            
+            if (result.success) {
+                updateStatus('Health check passed! System is running.', 'success');
+            } else {
+                updateStatus('Health check failed. System may not be running.', 'error');
+            }
+        }
+        
+        async function testAssets() {
+            updateStatus('Testing assets endpoint...', 'info');
+            const result = await makeRequest('http://localhost:8080/api/v1/assets');
+            logResponse('Get Assets', result.data, result.success);
+            
+            if (result.success) {
+                updateStatus('Assets endpoint working!', 'success');
+            } else {
+                updateStatus('Assets endpoint failed.', 'error');
+            }
+        }
+        
+        async function testCreateAsset() {
+            updateStatus('Testing create asset...', 'info');
+            const assetData = {
+                msisdn: '9999888777',
+                dealerId: 'TEST001',
+                mpin: '1234',
+                balance: 5000.0,
+                status: 'ACTIVE',
+                remarks: 'Test asset from web interface'
+            };
+            
+            const result = await makeRequest('http://localhost:8080/api/v1/assets', 'POST', assetData);
+            logResponse('Create Asset', result.data, result.success);
+            
+            if (result.success) {
+                updateStatus('Create asset working!', 'success');
+            } else {
+                updateStatus('Create asset failed.', 'error');
+            }
+        }
+        
+        async function runAllTests() {
+            testResults = [];
+            document.getElementById('response-area').textContent = 'Running comprehensive tests...\n';
+            
+            await testHealth();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testAssets();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testCreateAsset();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Summary
+            const passed = testResults.filter(r => r.success).length;
+            const total = testResults.length;
+            
+            if (passed === total) {
+                updateStatus(`All tests passed! (${passed}/${total}) System is working correctly!`, 'success');
+            } else {
+                updateStatus(`Some tests failed (${passed}/${total}). Check the responses above.`, 'warning');
+            }
+        }
+        
+        // Auto-check on page load
+        window.onload = function() {
+            setTimeout(testHealth, 1000);
+        };
+    </script>
+</body>
+</html>

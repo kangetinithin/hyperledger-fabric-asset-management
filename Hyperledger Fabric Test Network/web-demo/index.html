@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hyperledger Fabric Asset Management System - Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .status-section {
+            padding: 30px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border-left: 4px solid #3498db;
+        }
+        
+        .status-card.success {
+            border-left-color: #27ae60;
+        }
+        
+        .status-card.error {
+            border-left-color: #e74c3c;
+        }
+        
+        .status-card.warning {
+            border-left-color: #f39c12;
+        }
+        
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        
+        .status-indicator.online {
+            background: #27ae60;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.offline {
+            background: #e74c3c;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .demo-section {
+            padding: 30px;
+        }
+        
+        .demo-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .demo-btn {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .demo-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .demo-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .response-area {
+            background: #2c3e50;
+            color: #ecf0f1;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .footer {
+            background: #34495e;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .api-endpoints {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .endpoint {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .endpoint:last-child {
+            border-bottom: none;
+        }
+        
+        .method {
+            background: #3498db;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .method.post { background: #27ae60; }
+        .method.put { background: #f39c12; }
+        .method.delete { background: #e74c3c; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔗 Hyperledger Fabric Asset Management System</h1>
+            <p>Blockchain-based Financial Asset Management with REST API</p>
+        </div>
+        
+        <div class="status-section">
+            <h2>System Status</h2>
+            <div class="status-grid">
+                <div class="status-card" id="api-status">
+                    <h3><span class="status-indicator offline" id="api-indicator"></span>API Gateway</h3>
+                    <p id="api-text">Checking...</p>
+                </div>
+                <div class="status-card" id="blockchain-status">
+                    <h3><span class="status-indicator offline" id="blockchain-indicator"></span>Blockchain Network</h3>
+                    <p id="blockchain-text">Checking...</p>
+                </div>
+                <div class="status-card" id="assets-status">
+                    <h3><span class="status-indicator offline" id="assets-indicator"></span>Asset Count</h3>
+                    <p id="assets-text">Loading...</p>
+                </div>
+                <div class="status-card" id="performance-status">
+                    <h3><span class="status-indicator offline" id="performance-indicator"></span>Performance</h3>
+                    <p id="performance-text">Testing...</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Live API Demonstration</h2>
+            <p>Click the buttons below to interact with the Hyperledger Fabric network:</p>
+            
+            <div class="demo-buttons">
+                <button class="demo-btn" onclick="checkHealth()">🏥 Health Check</button>
+                <button class="demo-btn" onclick="initLedger()">🚀 Initialize Ledger</button>
+                <button class="demo-btn" onclick="getAllAssets()">📋 Get All Assets</button>
+                <button class="demo-btn" onclick="createAsset()">➕ Create Demo Asset</button>
+                <button class="demo-btn" onclick="getAsset()">🔍 Get Demo Asset</button>
+                <button class="demo-btn" onclick="creditAccount()">💰 Credit Account</button>
+                <button class="demo-btn" onclick="debitAccount()">💸 Debit Account</button>
+                <button class="demo-btn" onclick="getTransactions()">📊 Transaction History</button>
+            </div>
+            
+            <div class="response-area" id="response-area">
+Welcome to the Hyperledger Fabric Asset Management System Demo!
+
+This system demonstrates:
+✅ Blockchain-based asset management
+✅ REST API integration with Hyperledger Fabric
+✅ Real-time transaction processing
+✅ Complete audit trail
+✅ Secure MPIN-based authentication
+
+Click any button above to interact with the system.
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Available API Endpoints</h2>
+            <div class="api-endpoints">
+                <div class="endpoint">
+                    <span><span class="method">GET</span> /health</span>
+                    <span>Health check</span>
+                </div>
+                <div class="endpoint">
+                    <span><span class="method post">POST</span> /api/v1/ledger/init</span>
+                    <span>Initialize ledger</span>
+                </div>
+                <div class="endpoint">
+                    <span><span class="method post">POST</span> /api/v1/assets</span>
+                    <span>Create asset</span>
+                </div>
+                <div class="endpoint">
+                    <span><span class="method">GET</span> /api/v1/assets</span>
+                    <span>Get all assets</span>
+                </div>
+                <div class="endpoint">
+                    <span><span class="method">GET</span> /api/v1/assets/{msisdn}</span>
+                    <span>Get specific asset</span>
+                </div>
+                <div class="endpoint">
+                    <span><span class="method put">PUT</span> /api/v1/assets/{msisdn}/balance</span>
+                    <span>Update balance</span>
+                </div>
+                <div class="endpoint">
+                    <span><span class="method put">PUT</span> /api/v1/assets/{msisdn}/status</span>
+                    <span>Update status</span>
+                </div>
+                <div class="endpoint">
+                    <span><span class="method">GET</span> /api/v1/assets/{msisdn}/transactions</span>
+                    <span>Get transaction history</span>
+                </div>
+                <div class="endpoint">
+                    <span><span class="method delete">DELETE</span> /api/v1/assets/{msisdn}</span>
+                    <span>Delete asset</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>🔗 Hyperledger Fabric Asset Management System | Built with Go, Hyperledger Fabric, and REST API</p>
+            <p>Access API directly at: <strong>http://localhost:8080</strong></p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080';
+        const DEMO_MSISDN = '9999888777';
+        
+        // Check system status on load
+        window.onload = function() {
+            checkSystemStatus();
+        };
+        
+        function log(message) {
+            const responseArea = document.getElementById('response-area');
+            const timestamp = new Date().toLocaleTimeString();
+            responseArea.textContent += `\n[${timestamp}] ${message}`;
+            responseArea.scrollTop = responseArea.scrollHeight;
+        }
+        
+        function logResponse(method, endpoint, response, status) {
+            const timestamp = new Date().toLocaleTimeString();
+            const responseArea = document.getElementById('response-area');
+            responseArea.textContent += `\n[${timestamp}] ${method} ${endpoint}\n`;
+            responseArea.textContent += `Status: ${status}\n`;
+            responseArea.textContent += `Response: ${JSON.stringify(response, null, 2)}\n`;
+            responseArea.textContent += '----------------------------------------\n';
+            responseArea.scrollTop = responseArea.scrollHeight;
+        }
+        
+        async function makeRequest(method, endpoint, data = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(API_BASE + endpoint, options);
+                const responseData = await response.json().catch(() => response.text());
+                
+                logResponse(method, endpoint, responseData, response.status);
+                return { data: responseData, status: response.status };
+            } catch (error) {
+                log(`Error: ${error.message}`);
+                return { error: error.message, status: 0 };
+            }
+        }
+        
+        async function checkSystemStatus() {
+            // Check API Gateway
+            try {
+                const response = await fetch(API_BASE + '/health');
+                if (response.ok) {
+                    updateStatus('api', 'online', 'API Gateway Online');
+                    
+                    // Check assets
+                    const assetsResponse = await fetch(API_BASE + '/api/v1/assets');
+                    if (assetsResponse.ok) {
+                        const assets = await assetsResponse.json();
+                        const count = Array.isArray(assets) ? assets.length : 0;
+                        updateStatus('assets', 'online', `${count} Assets`);
+                        updateStatus('blockchain', 'online', 'Network Active');
+                    }
+                    
+                    // Performance test
+                    const start = Date.now();
+                    await fetch(API_BASE + '/health');
+                    const duration = Date.now() - start;
+                    updateStatus('performance', 'online', `${duration}ms response`);
+                } else {
+                    updateStatus('api', 'offline', 'API Gateway Offline');
+                }
+            } catch (error) {
+                updateStatus('api', 'offline', 'Connection Failed');
+                updateStatus('blockchain', 'offline', 'Network Offline');
+                updateStatus('assets', 'offline', 'Unavailable');
+                updateStatus('performance', 'offline', 'No Response');
+            }
+        }
+        
+        function updateStatus(component, status, text) {
+            const indicator = document.getElementById(`${component}-indicator`);
+            const textElement = document.getElementById(`${component}-text`);
+            const card = document.getElementById(`${component}-status`);
+            
+            indicator.className = `status-indicator ${status}`;
+            textElement.textContent = text;
+            
+            if (status === 'online') {
+                card.className = 'status-card success';
+            } else {
+                card.className = 'status-card error';
+            }
+        }
+        
+        async function checkHealth() {
+            log('Checking API health...');
+            await makeRequest('GET', '/health');
+        }
+        
+        async function initLedger() {
+            log('Initializing ledger with sample data...');
+            await makeRequest('POST', '/api/v1/ledger/init');
+            checkSystemStatus(); // Refresh status
+        }
+        
+        async function getAllAssets() {
+            log('Fetching all assets...');
+            await makeRequest('GET', '/api/v1/assets');
+        }
+        
+        async function createAsset() {
+            log('Creating demo asset...');
+            const assetData = {
+                msisdn: DEMO_MSISDN,
+                dealerId: 'DEMO999',
+                mpin: '1234',
+                balance: 10000.0,
+                status: 'ACTIVE',
+                remarks: 'Demo asset created from web interface'
+            };
+            await makeRequest('POST', '/api/v1/assets', assetData);
+        }
+        
+        async function getAsset() {
+            log('Fetching demo asset...');
+            await makeRequest('GET', `/api/v1/assets/${DEMO_MSISDN}`);
+        }
+        
+        async function creditAccount() {
+            log('Crediting demo account...');
+            const creditData = {
+                mpin: '1234',
+                amount: 2500.0,
+                transType: 'CREDIT',
+                remarks: 'Demo credit from web interface'
+            };
+            await makeRequest('PUT', `/api/v1/assets/${DEMO_MSISDN}/balance`, creditData);
+        }
+        
+        async function debitAccount() {
+            log('Debiting demo account...');
+            const debitData = {
+                mpin: '1234',
+                amount: 1000.0,
+                transType: 'DEBIT',
+                remarks: 'Demo debit from web interface'
+            };
+            await makeRequest('PUT', `/api/v1/assets/${DEMO_MSISDN}/balance`, debitData);
+        }
+        
+        async function getTransactions() {
+            log('Fetching transaction history...');
+            await makeRequest('GET', `/api/v1/assets/${DEMO_MSISDN}/transactions`);
+        }
+        
+        // Auto-refresh status every 30 seconds
+        setInterval(checkSystemStatus, 30000);
+    </script>
+</body>
+</html>
